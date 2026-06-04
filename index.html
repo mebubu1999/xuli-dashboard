@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>旭立 FB 數據分析中心</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F5F2;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE8;
+    --border: #E2DDD6;
+    --text: #1C1917;
+    --text2: #6B6560;
+    --text3: #A09990;
+    --purple: #6B4FA0;
+    --purple-l: #EDE7F6;
+    --purple-d: #3D2C60;
+    --teal: #1D7A62;
+    --teal-l: #E1F5EE;
+    --coral: #C14B2A;
+    --coral-l: #FAECE7;
+    --amber: #B06E10;
+    --amber-l: #FAEEDA;
+    --blue: #1A5FA0;
+    --blue-l: #E6F1FB;
+    --red: #A32D2D;
+    --red-l: #FCEBEB;
+    --green: #2D7A3A;
+    --green-l: #EAF3DE;
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .sidebar { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--text); color: #fff; display: flex; flex-direction: column; z-index: 100; overflow-y: auto; }
+  .sidebar-logo { padding: 24px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .sidebar-logo h1 { font-family: 'DM Serif Display', serif; font-size: 18px; color: #fff; line-height: 1.3; }
+  .sidebar-logo p  { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 3px; }
+  .sidebar-nav { flex: 1; padding: 12px 0; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; font-size: 13px; color: rgba(255,255,255,0.6); cursor: pointer; border-left: 3px solid transparent; transition: all .15s; }
+  .nav-item:hover { color: #fff; background: rgba(255,255,255,0.07); }
+  .nav-item.active { color: #fff; border-left-color: var(--purple); background: rgba(107,79,160,0.2); }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .nav-section { font-size: 10px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: .08em; padding: 16px 20px 6px; }
+  .main { margin-left: 220px; min-height: 100vh; }
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+  .topbar h2 { font-size: 16px; font-weight: 500; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .content { padding: 28px 32px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--r-sm); font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); transition: all .15s; }
+  .btn:hover { background: var(--surface2); }
+  .btn-primary { background: var(--purple); color: #fff; border-color: var(--purple); }
+  .btn-primary:hover { background: var(--purple-d); border-color: var(--purple-d); }
+  .btn svg { width: 15px; height: 15px; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 16px 18px; }
+  .kpi-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .kpi-val   { font-size: 26px; font-weight: 300; color: var(--text); letter-spacing: -.5px; line-height: 1; }
+  .kpi-sub   { font-size: 12px; color: var(--text3); margin-top: 5px; display: flex; align-items: center; gap: 4px; }
+  .delta { font-size: 11px; font-weight: 500; padding: 2px 6px; border-radius: 4px; }
+  .delta-up   { background: var(--green-l); color: var(--green); }
+  .delta-down { background: var(--red-l);   color: var(--red); }
+  .delta-neu  { background: var(--surface2); color: var(--text2); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; }
+  .card-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .bar-label { font-size: 12px; color: var(--text); flex: 0 0 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-bg { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width .4s ease; }
+  .bar-val { font-size: 11px; color: var(--text3); flex: 0 0 54px; text-align: right; }
+
+  .post-row { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .post-row:last-child { border-bottom: none; }
+  .post-rank { font-size: 14px; font-weight: 300; color: var(--text3); flex: 0 0 20px; }
+  .post-body { flex: 1; min-width: 0; }
+  .post-title { font-size: 12px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .post-meta  { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .tag { display: inline-block; font-size: 10px; font-weight: 500; padding: 1px 7px; border-radius: 999px; margin-left: 5px; }
+
+  .insight { border-radius: var(--r-sm); padding: 12px 14px; margin-bottom: 8px; border-left: 3px solid; }
+  .insight-title { font-size: 12px; font-weight: 500; margin-bottom: 3px; }
+  .insight-body  { font-size: 12px; color: var(--text2); line-height: 1.6; }
+  .insight-s { background: var(--green-l); border-color: var(--teal); }
+  .insight-s .insight-title { color: var(--teal); }
+  .insight-w { background: var(--amber-l); border-color: var(--amber); }
+  .insight-w .insight-title { color: var(--amber); }
+  .insight-i { background: var(--blue-l);  border-color: var(--blue); }
+  .insight-i .insight-title { color: var(--blue); }
+  .insight-d { background: var(--red-l);   border-color: var(--red); }
+  .insight-d .insight-title { color: var(--red); }
+
+  .upload-area { border: 2px dashed var(--border); border-radius: var(--r-lg); padding: 40px 20px; text-align: center; cursor: pointer; transition: all .15s; background: var(--surface); }
+  .upload-area:hover { border-color: var(--purple); background: var(--purple-l); }
+  .upload-area.drag { border-color: var(--purple); background: var(--purple-l); }
+  .upload-icon { width: 40px; height: 40px; margin: 0 auto 12px; color: var(--text3); }
+  .upload-area h3 { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+  .upload-area p  { font-size: 13px; color: var(--text3); }
+  #fileInput { display: none; }
+
+  .hist-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .hist-table th { background: var(--surface2); color: var(--text2); font-weight: 500; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+  .hist-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .hist-table tr:last-child td { border-bottom: none; }
+  .hist-table tr:hover td { background: var(--surface2); }
+  .period-badge { font-size: 11px; background: var(--purple-l); color: var(--purple); padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+
+  /* ── Strategy Page ─────────────────────────────────────────── */
+  .strat-hero {
+    background: linear-gradient(135deg, var(--purple-d) 0%, var(--purple) 60%, #9B7FD4 100%);
+    border-radius: var(--r-lg);
+    padding: 28px 32px;
+    color: #fff;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .strat-hero::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+  .strat-hero h3 { font-size: 20px; font-weight: 500; margin-bottom: 6px; position: relative; }
+  .strat-hero p  { font-size: 13px; opacity: .75; position: relative; line-height: 1.6; }
+  .strat-hero-meta { display: flex; gap: 24px; margin-top: 16px; position: relative; }
+  .strat-hero-stat { }
+  .strat-hero-stat .val { font-size: 22px; font-weight: 300; }
+  .strat-hero-stat .lbl { font-size: 11px; opacity: .6; margin-top: 2px; }
+
+  .strat-section-title {
+    font-size: 11px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: .1em; color: var(--text3); margin: 20px 0 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .strat-section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  .strat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    transition: box-shadow .15s;
+  }
+  .strat-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+  .strat-card-icon {
+    width: 40px; height: 40px; border-radius: var(--r-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .strat-card-body { flex: 1; min-width: 0; }
+  .strat-card-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .strat-card-desc  { font-size: 12px; color: var(--text2); line-height: 1.7; }
+  .strat-card-examples { margin-top: 10px; }
+  .strat-card-examples-title { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+  .example-pill {
+    display: inline-block; font-size: 11px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 3px 10px; margin: 2px 3px 2px 0; color: var(--text2);
+    cursor: default;
+  }
+  .example-pill:hover { background: var(--purple-l); border-color: var(--purple); color: var(--purple); }
+
+  .badge-hot    { background: var(--coral-l); color: var(--coral); font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+  .badge-keep   { background: var(--green-l); color: var(--green); font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+  .badge-new    { background: var(--purple-l); color: var(--purple); font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+  .badge-warn   { background: var(--amber-l); color: var(--amber); font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+  .badge-fix    { background: var(--red-l); color: var(--red); font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+
+  .timing-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 12px; }
+  .timing-card {
+    border-radius: var(--r-md); padding: 14px 16px; text-align: center;
+    border: 1px solid var(--border); background: var(--surface);
+  }
+  .timing-card.best { border-color: var(--purple); background: var(--purple-l); }
+  .timing-card .t-time { font-size: 20px; font-weight: 300; color: var(--text); margin-bottom: 3px; }
+  .timing-card.best .t-time { color: var(--purple); }
+  .timing-card .t-reach { font-size: 12px; color: var(--text2); }
+  .timing-card .t-label { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  .calendar-week {
+    display: grid; grid-template-columns: repeat(7,1fr); gap: 6px;
+    margin-top: 8px;
+  }
+  .cal-day {
+    border-radius: var(--r-sm); padding: 10px 6px; text-align: center;
+    border: 1px solid var(--border); background: var(--surface);
+    font-size: 11px; transition: all .15s;
+  }
+  .cal-day .day-name { color: var(--text3); margin-bottom: 4px; }
+  .cal-day .day-reach { font-size: 13px; font-weight: 500; color: var(--text); }
+  .cal-day.cal-best  { background: var(--purple); border-color: var(--purple); }
+  .cal-day.cal-best .day-name  { color: rgba(255,255,255,.6); }
+  .cal-day.cal-best .day-reach { color: #fff; }
+  .cal-day.cal-good  { background: var(--purple-l); border-color: var(--purple); }
+  .cal-day.cal-good .day-reach { color: var(--purple); }
+  .cal-day.cal-bad   { opacity: .4; }
+
+  .cadence-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .cadence-row:last-child { border-bottom: none; }
+  .cadence-row .c-time { flex: 0 0 110px; color: var(--text2); font-size: 12px; }
+  .cadence-row .c-type { flex: 1; color: var(--text); font-weight: 500; }
+  .cadence-row .c-note { font-size: 11px; color: var(--text3); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: #fff; padding: 12px 18px; border-radius: var(--r-md); font-size: 13px; z-index: 9999; transform: translateY(60px); opacity: 0; transition: all .3s; }
+  .toast.show { transform: none; opacity: 1; }
+
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .section-title { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .07em; color: var(--text3); }
+  .empty { text-align: center; padding: 48px 20px; color: var(--text3); font-size: 13px; }
+  .ch-wrap { position: relative; }
+
+  @media (max-width: 900px) {
+    .sidebar { width: 60px; }
+    .sidebar-logo, .nav-section { display: none; }
+    .nav-item span { display: none; }
+    .nav-item { justify-content: center; padding: 12px; }
+    .main { margin-left: 60px; }
+    .content { padding: 20px 16px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .grid2, .grid3, .timing-grid { grid-template-columns: 1fr; }
+    .strat-hero { padding: 20px; }
+    .calendar-week { grid-template-columns: repeat(4,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h1>旭立心理<br>數據中心</h1>
+    <p>FB Analytics Dashboard</p>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section">分析</div>
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <span>總覽儀表板</span>
+    </div>
+    <div class="nav-item" onclick="showPage('strategy')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span>發文策略建議</span>
+    </div>
+    <div class="nav-item" onclick="showPage('compare')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      <span>跨期比對</span>
+    </div>
+    <div class="nav-item" onclick="showPage('posts')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span>貼文排行</span>
+    </div>
+    <div class="nav-section">資料</div>
+    <div class="nav-item" onclick="showPage('upload')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+      <span>上傳新數據</span>
+    </div>
+    <div class="nav-item" onclick="showPage('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>歷史記錄</span>
+    </div>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <h2 id="pageTitle">總覽儀表板</h2>
+    <div class="topbar-right">
+      <span id="currentPeriod" style="font-size:12px;color:var(--text3);">載入中...</span>
+      <button class="btn btn-primary" onclick="showPage('upload')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+        上傳新數據
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Dashboard -->
+    <div id="page-dashboard" class="page active">
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title">月度觸及趨勢</div>
+          <div class="ch-wrap" style="height:200px;"><canvas id="trendChart" role="img" aria-label="月度平均觸及趨勢"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">各類型平均觸及</div>
+          <div id="typeReachBars"></div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title">觸及前 5 名</div>
+          <div id="topReachList"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">關鍵洞察</div>
+          <div id="insightsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Strategy Page ══════════════════════════════════════════════════ -->
+    <div id="page-strategy" class="page">
+      <div id="stratContent"></div>
+    </div>
+
+    <!-- Compare -->
+    <div id="page-compare" class="page">
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">跨期趨勢比較（所有已上傳期別）</div>
+        <div class="ch-wrap" style="height:220px;"><canvas id="compareChart" role="img" aria-label="跨期比較圖"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">各期核心指標對比</div>
+        <div style="overflow-x:auto;"><table class="hist-table" id="compareTable"></table></div>
+      </div>
+    </div>
+
+    <!-- Posts -->
+    <div id="page-posts" class="page">
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title">觸及排行（最新期）</div>
+          <div id="allTopReach"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">分享排行（最新期）</div>
+          <div id="allTopShare"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">互動率排行（最新期）</div>
+        <div id="allTopEng"></div>
+      </div>
+    </div>
+
+    <!-- Upload -->
+    <div id="page-upload" class="page">
+      <div style="max-width:600px;">
+        <div class="upload-area" id="uploadArea">
+          <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+          <h3>上傳 FB 後台 CSV</h3>
+          <p>點擊選擇或拖曳檔案到這裡</p>
+          <p style="margin-top:8px;font-size:12px;">FB 後台 → 洞察報告 → 貼文 → 匯出數據 → 下載 CSV</p>
+          <input type="file" id="fileInput" accept=".csv">
+        </div>
+        <div id="uploadStatus" style="margin-top:16px;"></div>
+        <div style="margin-top:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:16px;">
+          <div style="font-size:13px;font-weight:500;margin-bottom:8px;">說明</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+            1. 每次上傳新 CSV，系統會自動解析並<strong>儲存到本機</strong>。<br>
+            2. 數據存在瀏覽器的 localStorage，<strong>不會消失</strong>（除非清除瀏覽器資料）。<br>
+            3. 上傳多次後，「跨期比對」頁面會自動顯示所有期別的趨勢。<br>
+            4. 支援任何時間範圍的 FB 後台貼文 CSV。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div id="page-history" class="page">
+      <div class="card">
+        <div class="section-header">
+          <div class="card-title" style="margin-bottom:0;">已儲存的數據期別</div>
+          <button class="btn" onclick="clearAll()" style="color:var(--red);border-color:var(--red-l);">清除全部</button>
+        </div>
+        <div id="historyList"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── Seed Data ─────────────────────────────────────────────────────────────
+const SEED = {
+  period: '2026-01 ~ 2026-06',
+  label: '2026 H1 (1-6月)',
+  total: 57,
+  avg_reach: 2382,
+  avg_er: 2.65,
+  avg_share: 10.7,
+  max_reach: 17008,
+  monthly: [
+    { m:'1月', avg_reach:2225, avg_er:3.3, avg_share:10.2, count:11 },
+    { m:'2月', avg_reach:1509, avg_er:2.7, avg_share:4.9,  count:8  },
+    { m:'3月', avg_reach:4102, avg_er:2.4, avg_share:15.6, count:8  },
+    { m:'4月', avg_reach:2868, avg_er:2.2, avg_share:16.4, count:8  },
+    { m:'5月', avg_reach:1827, avg_er:3.0, avg_share:11.9, count:8  },
+    { m:'6月', avg_reach:1237, avg_er:2.1, avg_share:1.5,  count:2  },
+  ],
+  types: [
+    { name:'名人×諮商系列',       avg_reach:3969, avg_er:2.3, avg_share:15.9, count:10 },
+    { name:'情感共鳴「你」系列',   avg_reach:3920, avg_er:2.1, avg_share:19.6, count:8  },
+    { name:'活動/公告',           avg_reach:2814, avg_er:3.0, avg_share:10.2, count:4  },
+    { name:'榮格/深度探索',        avg_reach:1774, avg_er:2.5, avg_share:9.0,  count:10 },
+    { name:'心理知識深度文',        avg_reach:1689, avg_er:2.4, avg_share:5.5,  count:6  },
+    { name:'影視/研究者名言',      avg_reach:1628, avg_er:3.9, avg_share:11.1, count:10 },
+  ],
+  top_posts: [
+    { title:'WBC棒球員也受過心理師的幫助', reach:17008, share:44, er:1.96, type:'名人×諮商系列' },
+    { title:'你是不是也有這種時候（過度理智化）', reach:9641, share:65, er:2.43, type:'情感共鳴「你」系列' },
+    { title:'呂旭亞榮格講座（9月）', reach:7591, share:39, er:1.99, type:'榮格/深度探索' },
+    { title:'旭立尾牙二館開立', reach:6713, share:4, er:2.01, type:'活動/公告' },
+    { title:'蔡加尼克效應', reach:6155, share:51, er:2.68, type:'影視/研究者名言' },
+  ],
+  insights: [
+    { type:'s', title:'雙引擎：名人×諮商 + 情感共鳴「你」系列觸及最強', body:'兩類型均接近 4,000 均觸及，是帳號成長的核心引擎。' },
+    { type:'s', title:'21時發文觸及比 20時高出 57%', body:'半年 57 篇數據確認：21:00–21:40 是最佳發文窗口。' },
+    { type:'i', title:'影片格式互動率高達 4.3%（相片均值 2.6%）', body:'目前僅 3 支影片，建議每月增加 1–2 支短影片。' },
+    { type:'w', title:'女性 35–54 歲佔觀眾 59%，年輕受眾需補強', body:'25–34 歲女性僅 10%，低於來談主力比例。' },
+    { type:'d', title:'男性受眾僅 13.8%，棒球/職場是突破口', body:'「高成就男性心理素質」為待開發主題方向。' },
+  ],
+  // Strategy-specific pre-computed fields for seed
+  bestHour: 21,
+  bestHourReach: 3678,
+  secondHour: 20,
+  secondHourReach: 2071,
+  bestDay: '一',
+  bestDayReach: 3847,
+  worstDays: ['二','三'],
+  timing: [
+    { time:'週一 21:00', dot:'#6B4FA0', type:'情感共鳴「你」系列', note:'首選主力時段' },
+    { time:'週四 21:00', dot:'#1D7A62', type:'榮格/時事連結 交替', note:'次強時段' },
+    { time:'週一 21:00', dot:'#C14B2A', type:'輕量娛樂連結（Netflix/流行梗）', note:'每月 1–2 篇' },
+    { time:'機動出稿',   dot:'#B06E10', type:'社會事件心理視角回應', note:'48hr 內' },
+  ],
+  fix: '本期有凌晨發文（0–5 時），平均觸及僅 400，請確認排程設定',
+};
+
+// ─── Storage ───────────────────────────────────────────────────────────────
+const STORE_KEY = 'xuli_fb_periods';
+
+function loadPeriods() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    const periods = raw ? JSON.parse(raw) : [];
+    if (!periods.find(p => p.period === SEED.period)) {
+      periods.unshift(SEED);
+      localStorage.setItem(STORE_KEY, JSON.stringify(periods));
+    }
+    return periods;
+  } catch(e) { return [SEED]; }
+}
+
+function savePeriods(periods) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(periods));
+}
+
+function clearAll() {
+  if (!confirm('確定要清除所有歷史數據嗎？')) return;
+  localStorage.removeItem(STORE_KEY);
+  showToast('已清除所有資料');
+  renderAll();
+}
+
+// ─── CSV Parser ────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g,'').trim());
+  return lines.slice(1).map(line => {
+    const vals = []; let cur = ''; let inQ = false;
+    for (const c of line) {
+      if (c === '"') inQ = !inQ;
+      else if (c === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
+      else cur += c;
+    }
+    vals.push(cur.trim());
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = (vals[i]||'').replace(/^"|"$/g,'').trim());
+    return obj;
+  }).filter(r => r['標題'] && r['觸及人數']);
+}
+
+function n(v) { return parseFloat(String(v).replace(/,/g,'')) || 0; }
+
+function classifyPost(title) {
+  const t = String(title);
+  if (/你是不是|你沒有|你愛的|你是在|你也是|你有沒有|你今天|你還記得/.test(t)) return '情感共鳴「你」系列';
+  if (/榮格|呂旭亞|潛意識/.test(t)) return '榮格/深度探索';
+  if (t.includes('【') && /活動|工作坊|講座|計畫|招募|報名|尾牙|社工/.test(t)) return '活動/公告';
+  if (/如果.*(諮商|心理師)|來做心理諮商/.test(t)) return '名人×諮商系列';
+  if (/棒球|WBC|《|Brené|Brown|Gottman|蔡加尼克|Terry|Orna/.test(t)) return '影視/研究者名言';
+  if (/親職化|Unplugged|界線|情緒|焦慮|創傷|憂鬱/.test(t)) return '心理知識深度文';
+  return '其他';
+}
+
+function processCSV(rows) {
+  rows.forEach(r => {
+    r._reach   = n(r['觸及人數']);
+    r._engage  = n(r['心情、留言和分享次數'] || 0);
+    r._share   = n(r['分享'] || 0);
+    r._comment = n(r['留言'] || 0);
+    r._er      = r._reach > 0 ? r._engage / r._reach * 100 : 0;
+    r._type    = classifyPost(r['標題']);
+    try {
+      const raw = r['發佈時間'] || '';
+      const parts = raw.split(' ')[0].split('/');
+      if (parts.length === 3) {
+        const [a,b,y] = parts;
+        r._date = new Date(`${y}-${a.padStart(2,'0')}-${b.padStart(2,'0')}`);
+        r._month = r._date.getMonth() + 1;
+        r._hour = parseInt((raw.split(' ')[1]||'0').split(':')[0]);
+        r._dow  = r._date.getDay(); // 0=Sun
+      }
+    } catch(e) {}
+  });
+  return rows;
+}
+
+function buildPeriodSummary(rows, label) {
+  const total = rows.length;
+  const avg_reach = rows.reduce((s,r)=>s+r._reach,0)/total;
+  const avg_er    = rows.reduce((s,r)=>s+r._er,0)/total;
+  const avg_share = rows.reduce((s,r)=>s+r._share,0)/total;
+  const max_reach = Math.max(...rows.map(r=>r._reach));
+
+  // Monthly
+  const mMap = {};
+  rows.forEach(r => {
+    if (!r._month) return;
+    const k = r._month + '月';
+    if (!mMap[k]) mMap[k] = { reach:[], er:[], share:[] };
+    mMap[k].reach.push(r._reach); mMap[k].er.push(r._er); mMap[k].share.push(r._share);
+  });
+  const monthly = Object.entries(mMap).map(([m,d])=>({
+    m, avg_reach: d.reach.reduce((a,b)=>a+b,0)/d.reach.length,
+    avg_er: d.er.reduce((a,b)=>a+b,0)/d.er.length,
+    avg_share: d.share.reduce((a,b)=>a+b,0)/d.share.length,
+    count: d.reach.length,
+  }));
+
+  // Types
+  const tMap = {};
+  rows.forEach(r => {
+    if (!tMap[r._type]) tMap[r._type] = { reach:[], er:[], share:[] };
+    tMap[r._type].reach.push(r._reach); tMap[r._type].er.push(r._er); tMap[r._type].share.push(r._share);
+  });
+  const types = Object.entries(tMap).map(([name,d])=>({
+    name, count: d.reach.length,
+    avg_reach: d.reach.reduce((a,b)=>a+b,0)/d.reach.length,
+    avg_er:    d.er.reduce((a,b)=>a+b,0)/d.er.length,
+    avg_share: d.share.reduce((a,b)=>a+b,0)/d.share.length,
+  })).sort((a,b)=>b.avg_reach-a.avg_reach);
+
+  const top_posts = [...rows].sort((a,b)=>b._reach-a._reach).slice(0,8).map(r=>({
+    title:(r['標題']||'').slice(0,30), reach:r._reach, share:r._share,
+    er:Math.round(r._er*100)/100, type:r._type,
+  }));
+
+  // ── Hour/Day timing analysis ──
+  const hourMap = {};
+  rows.forEach(r => {
+    if (r._hour === undefined || isNaN(r._hour)) return;
+    if (!hourMap[r._hour]) hourMap[r._hour] = [];
+    hourMap[r._hour].push(r._reach);
+  });
+  const hourAvgs = Object.entries(hourMap).map(([h,arr])=>({
+    h:parseInt(h), avg: arr.reduce((a,b)=>a+b,0)/arr.length, count: arr.length
+  })).filter(x=>x.count>=1).sort((a,b)=>b.avg-a.avg);
+
+  const bestHourObj   = hourAvgs[0] || { h:21, avg:0 };
+  const secondHourObj = hourAvgs[1] || { h:20, avg:0 };
+
+  // Detect bad hours (avg < 50% of overall)
+  const badHourPosts = rows.filter(r => r._hour !== undefined && r._hour < 6 && r._reach < avg_reach * 0.5);
+
+  const dowMap = {};
+  rows.forEach(r => {
+    if (r._dow === undefined || isNaN(r._dow)) return;
+    const dow = r._dow;
+    if (!dowMap[dow]) dowMap[dow] = [];
+    dowMap[dow].push(r._reach);
+  });
+  const dowNames = ['日','一','二','三','四','五','六'];
+  const dowAvgs = Object.entries(dowMap).map(([d,arr])=>({
+    d: parseInt(d), name: dowNames[parseInt(d)],
+    avg: arr.reduce((a,b)=>a+b,0)/arr.length, count: arr.length
+  })).sort((a,b)=>b.avg-a.avg);
+
+  const bestDayObj  = dowAvgs[0] || { name:'一', avg:0 };
+  const worstDays   = dowAvgs.filter(d=>d.avg < avg_reach * 0.5).map(d=>d.name);
+
+  // ── Insights ──
+  const bestType  = types[0];
+  const worstType = [...types].sort((a,b)=>a.avg_reach-b.avg_reach)[0];
+  const h21  = rows.filter(r=>r._hour===21);
+  const h20  = rows.filter(r=>r._hour===20);
+  const h21a = h21.length ? h21.reduce((s,r)=>s+r._reach,0)/h21.length : 0;
+  const h20a = h20.length ? h20.reduce((s,r)=>s+r._reach,0)/h20.length : 0;
+  const lowPosts = rows.filter(r=>r._reach < avg_reach*0.5);
+  const insights = [];
+  if (bestType) insights.push({ type:'s', title:`觸及最強類型：${bestType.name}（均 ${Math.round(bestType.avg_reach).toLocaleString()}）`, body:`共 ${bestType.count} 篇，建議每期至少安排 2 篇維持觸及引擎。` });
+  if (h21a > h20a*1.2 && h21.length>=2) insights.push({ type:'s', title:`21時發文觸及比 20時高 ${Math.round((h21a/h20a-1)*100)}%`, body:`21時（${h21.length}篇）均觸及 ${Math.round(h21a).toLocaleString()}，建議統一排程在 21:00–21:40。` });
+  if (lowPosts.length>0) insights.push({ type:'w', title:`${lowPosts.length} 篇觸及低於均值 50%`, body:`這些貼文可能缺乏情緒鉤子或自我揭露開場句，可嘗試改寫開頭。` });
+  if (worstType && worstType.avg_reach < avg_reach*0.6) insights.push({ type:'d', title:`${worstType.name} 觸及偏低（均 ${Math.round(worstType.avg_reach).toLocaleString()}）`, body:`建議搭配知識暖身篇先行，3–5 天後再發此類貼文。` });
+
+  // ── Timing suggestion for strategy page ──
+  const timingSlots = [];
+  const typeColors = {'名人×諮商系列':'#C14B2A','情感共鳴「你」系列':'#6B4FA0','活動/公告':'#1A5FA0','榮格/深度探索':'#185FA5','心理知識深度文':'#1D7A62','影視/研究者名言':'#B06E10','其他':'#888780'};
+  if (types[0]) timingSlots.push({ time:`${bestDayObj.name} ${bestHourObj.h}:00`, dot: typeColors[types[0].name]||'#6B4FA0', type: types[0].name, note:'首選主力時段' });
+  if (types[1]) timingSlots.push({ time:`週四 ${bestHourObj.h}:00`, dot: typeColors[types[1].name]||'#1D7A62', type: types[1].name + ' / 時事連結 交替', note:'次強時段' });
+  if (types[2]) timingSlots.push({ time:`每月 1–2 篇`, dot:'#B06E10', type:'輕量娛樂 / 流行梗連結', note:'可彈性補充' });
+  timingSlots.push({ time:'機動出稿', dot:'#A32D2D', type:'社會事件心理視角回應', note:'事件後 48hr 內' });
+
+  const dates = rows.filter(r=>r._date&&!isNaN(r._date)).map(r=>r._date).sort((a,b)=>a-b);
+  const auto_label = dates.length>=2
+    ? `${dates[0].getFullYear()}.${dates[0].getMonth()+1}.${dates[0].getDate()} – ${dates[dates.length-1].getMonth()+1}.${dates[dates.length-1].getDate()}`
+    : label;
+
+  return {
+    period: auto_label, label: label || auto_label,
+    total, avg_reach: Math.round(avg_reach), avg_er: Math.round(avg_er*100)/100,
+    avg_share: Math.round(avg_share*10)/10, max_reach,
+    monthly, types, top_posts, insights,
+    bestHour: bestHourObj.h, bestHourReach: Math.round(bestHourObj.avg),
+    secondHour: secondHourObj.h, secondHourReach: Math.round(secondHourObj.avg),
+    bestDay: bestDayObj.name, bestDayReach: Math.round(bestDayObj.avg),
+    worstDays, timing: timingSlots,
+    dowAvgs,
+    fix: badHourPosts.length > 0 ? `本期有 ${badHourPosts.length} 篇凌晨（0–5 時）發文，平均觸及僅 ${Math.round(badHourPosts.reduce((s,r)=>s+r._reach,0)/badHourPosts.length)}，請確認排程設定` : null,
+    _rows: rows,
+  };
+}
+
+// ─── Strategy Renderer ────────────────────────────────────────────────────
+const TYPE_META = {
+  '名人×諮商系列':      { icon:'🌟', color:'#C14B2A', bg:'#FAECE7', badge:'badge-hot',  label:'最高觸及', examples:['WBC棒球員×心理師','奧本海默×焦慮','如果達文西來做諮商','如果孔子來做諮商'] },
+  '情感共鳴「你」系列':  { icon:'💬', color:'#6B4FA0', bg:'#EDE7F6', badge:'badge-hot',  label:'最高分享', examples:['你是不是也有這種時候——心裡很吵','你沒有崩潰，所以以為自己沒事','你愛的是他，還是腦補的他','你是在關係裡領責任制的員工嗎'] },
+  '榮格/深度探索':       { icon:'🌙', color:'#1D7A62', bg:'#E1F5EE', badge:'badge-keep', label:'高分享', examples:['米蒂亞情結','狄米特女神×母女關係','雅典娜×高成就女性的盔甲','赫拉×嫉妒與自我價值'] },
+  '活動/公告':           { icon:'📣', color:'#1A5FA0', bg:'#E6F1FB', badge:'badge-keep', label:'穩定', examples:['痛點文末帶活動連結','中心人情味後台日常','Podcast 預告搭配名言'] },
+  '心理知識深度文':      { icon:'🔬', color:'#B06E10', bg:'#FAEEDA', badge:'badge-new',  label:'分享潛力', examples:['蔡加尼克效應','親職化','Unplugged 概念','鏡像神經元'] },
+  '影視/研究者名言':     { icon:'🎬', color:'#534AB7', bg:'#EEEDFE', badge:'badge-new',  label:'待觀察', examples:['地獄占星師×命運感','Netflix 熱播劇×心理學','研究者 Brené Brown 名言'] },
+  '其他':               { icon:'📝', color:'#888780', bg:'#F1EFE8', badge:'badge-warn', label:'需調整', examples:[] },
+};
+
+function renderStrategy(period) {
+  if (!period) return;
+  const types = period.types || [];
+  const avgReach = period.avg_reach;
+  const dowAvgs = period.dowAvgs || [];
+  const dowNames = ['日','一','二','三','四','五','六'];
+
+  // Day reach map
+  const dayReachMap = {};
+  if (dowAvgs.length) {
+    dowAvgs.forEach(d => { dayReachMap[d.name] = Math.round(d.avg); });
+  } else {
+    // Fallback from seed
+    ['一','二','三','四','五','六','日'].forEach(d => { dayReachMap[d] = 0; });
+    dayReachMap['一'] = period.bestDayReach || 3847;
+  }
+  const maxDay = Math.max(...Object.values(dayReachMap).filter(Boolean), 1);
+  const calDays = ['一','二','三','四','五','六','日'];
+
+  // Sort types by reach
+  const sorted = [...types].sort((a,b) => b.avg_reach - a.avg_reach);
+  const top2   = sorted.slice(0, 2);
+  const mid    = sorted.slice(2, 4);
+  const low    = sorted.slice(4);
+
+  function typeCardHTML(t, idx) {
+    const meta = TYPE_META[t.name] || TYPE_META['其他'];
+    const pct  = Math.round(t.avg_reach / avgReach * 100);
+    const isTop = pct >= 120;
+    const isMid = pct >= 80 && pct < 120;
+    const badgeClass = isTop ? 'badge-hot' : isMid ? 'badge-keep' : 'badge-warn';
+    const badgeText  = isTop ? `均觸及 ${t.avg_reach.toLocaleString()}` : isMid ? `均觸及 ${t.avg_reach.toLocaleString()}` : `低於均值 ${100-pct}%`;
+    const examples = meta.examples || [];
+    return `
+      <div class="strat-card">
+        <div class="strat-card-icon" style="background:${meta.bg};color:${meta.color}">${meta.icon}</div>
+        <div class="strat-card-body">
+          <div class="strat-card-title">
+            ${t.name}
+            <span class="${badgeClass}">${badgeText}</span>
+          </div>
+          <div class="strat-card-desc">
+            共 <strong>${t.count}</strong> 篇 ｜ 均分享 <strong>${Math.round(t.avg_share)}</strong> ｜ 均互動率 <strong>${t.avg_er.toFixed(1)}%</strong>
+            ${getTypeAdvice(t, avgReach)}
+          </div>
+          ${examples.length ? `<div class="strat-card-examples">
+            <div class="strat-card-examples-title">建議題材方向</div>
+            ${examples.map(e=>`<span class="example-pill">${e}</span>`).join('')}
+          </div>` : ''}
+        </div>
+      </div>`;
+  }
+
+  function getTypeAdvice(t, avg) {
+    const pct = t.avg_reach / avg;
+    const n = t.name;
+    if (pct >= 1.3) return `<br><span style="color:var(--teal);font-size:12px;">✦ 核心引擎——每月至少安排 2 篇，維持帳號觸及基礎。</span>`;
+    if (pct >= 1.0) return `<br><span style="color:var(--blue);font-size:12px;">✦ 穩定貢獻——維持頻率，搭配黃金時段發出效果更佳。</span>`;
+    if (pct >= 0.7) return `<br><span style="color:var(--amber);font-size:12px;">✦ 有潛力——嘗試加入更強的「你」開場句或自我揭露鉤子。</span>`;
+    return `<br><span style="color:var(--red);font-size:12px;">✦ 需調整——建議先發情感共鳴暖身篇，3–5 天後再搭配此類型。</span>`;
+  }
+
+  const dowCalHTML = calDays.map(d => {
+    const r = dayReachMap[d] || 0;
+    const ratio = r / maxDay;
+    const cls = ratio >= 0.85 ? 'cal-best' : ratio >= 0.60 ? 'cal-good' : ratio <= 0.25 ? 'cal-bad' : '';
+    return `<div class="cal-day ${cls}">
+      <div class="day-name">${d}</div>
+      <div class="day-reach">${r ? Math.round(r/100)/10+'k' : '—'}</div>
+    </div>`;
+  }).join('');
+
+  const timingRows = (period.timing || SEED.timing).map(t => `
+    <div class="cadence-row">
+      <div class="c-time">${t.time}</div>
+      <div class="dot" style="background:${t.dot}"></div>
+      <div class="c-type">${t.type}</div>
+      <div class="c-note">${t.note}</div>
+    </div>`).join('');
+
+  const fixHTML = period.fix ? `
+    <div class="insight insight-d" style="margin-bottom:16px;">
+      <div class="insight-title">⚠ 立即修正</div>
+      <div class="insight-body">${period.fix}</div>
+    </div>` : '';
+
+  document.getElementById('stratContent').innerHTML = `
+    <!-- Hero -->
+    <div class="strat-hero">
+      <h3>發文策略建議</h3>
+      <p>根據 ${period.label || period.period}（共 ${period.total} 篇）的實際數據自動生成</p>
+      <div class="strat-hero-meta">
+        <div class="strat-hero-stat"><div class="val">${period.avg_reach.toLocaleString()}</div><div class="lbl">平均觸及</div></div>
+        <div class="strat-hero-stat"><div class="val">${period.avg_er}%</div><div class="lbl">平均互動率</div></div>
+        <div class="strat-hero-stat"><div class="val">${period.avg_share}</div><div class="lbl">平均分享</div></div>
+        <div class="strat-hero-stat"><div class="val">${period.max_reach.toLocaleString()}</div><div class="lbl">最高觸及</div></div>
+      </div>
+    </div>
+
+    ${fixHTML}
+
+    <!-- Section: Content Types -->
+    <div class="strat-section-title">內容類型表現 & 建議方向</div>
+    ${sorted.map((t, i) => typeCardHTML(t, i)).join('')}
+
+    <!-- Section: Timing -->
+    <div class="strat-section-title">最佳發文時機</div>
+    <div class="grid2" style="margin-bottom:16px;">
+      <div class="card">
+        <div class="card-title">星期觸及熱力圖</div>
+        <div class="calendar-week">${dowCalHTML}</div>
+        <div style="margin-top:10px;font-size:11px;color:var(--text3);display:flex;gap:12px;flex-wrap:wrap;">
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--purple);margin-right:4px;vertical-align:middle;"></span>最佳</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--purple-l);border:1px solid var(--purple);margin-right:4px;vertical-align:middle;"></span>次佳</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--surface2);margin-right:4px;vertical-align:middle;opacity:.4;"></span>避免</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">時段 vs 平均觸及</div>
+        <div class="ch-wrap" style="height:170px;"><canvas id="hourChart" role="img" aria-label="時段觸及圖"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Section: Cadence -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">建議發文節奏</div>
+      ${timingRows}
+    </div>
+
+    <!-- Section: Format Tips -->
+    <div class="strat-section-title">貼文格式建議</div>
+    <div class="grid3">
+      <div class="card">
+        <div style="font-size:22px;margin-bottom:8px;">🪝</div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:6px;">開場句公式</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.7;">
+          「你是不是也有這種時候——」<br>
+          「你有沒有發現，其實…」<br>
+          「明明什麼都懂了，但…」<br>
+          以自我揭露句帶入，讓讀者在第一行就感到被看見。
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-size:22px;margin-bottom:8px;">🧱</div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:6px;">內容結構</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.7;">
+          <strong>A</strong>（共鳴場景）→ <strong>B</strong>（心理學解釋）→ <strong>C</strong>（連結諮商）<br><br>
+          活動推廣改用「痛點文帶連結」：先發內容文，文末自然帶活動資訊。
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-size:22px;margin-bottom:8px;">⚡</div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:6px;">時事回應 SOP</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.7;">
+          事件發生 → <strong>48hr 內</strong> 出稿<br>
+          格式：社會背景 → 心理師視角 → 支持族群 → 旭立能做什麼<br><br>
+          時事貼文互動率比一般貼文高 2–3 倍。
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Render hour chart dynamically if data exists
+  const rows = period._rows;
+  if (rows && rows.length) {
+    const hMap = {};
+    rows.forEach(r => {
+      if (r._hour === undefined || isNaN(r._hour)) return;
+      if (!hMap[r._hour]) hMap[r._hour] = [];
+      hMap[r._hour].push(r._reach);
+    });
+    const hEntries = Object.entries(hMap).sort((a,b)=>a[0]-b[0]);
+    const hLabels = hEntries.map(([h])=> h + ':00');
+    const hData   = hEntries.map(([,arr])=> Math.round(arr.reduce((a,b)=>a+b,0)/arr.length));
+    const hColors = hData.map((v,i) => {
+      const maxH = Math.max(...hData);
+      return v === maxH ? '#6B4FA0' : v >= maxH * 0.7 ? '#9B7FD4' : '#D8D0EA';
+    });
+    setTimeout(() => {
+      const ctx = document.getElementById('hourChart');
+      if (ctx) {
+        new Chart(ctx, {
+          type: 'bar',
+          data: { labels: hLabels, datasets: [{ data: hData, backgroundColor: hColors, borderRadius: 5, borderSkipped: false }] },
+          options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+            scales: { x:{ticks:{font:{size:10},color:'#A09990'},grid:{display:false}},
+                      y:{ticks:{font:{size:10},color:'#A09990',callback:v=>v>=1000?(v/1000).toFixed(1)+'k':v},grid:{color:'rgba(0,0,0,0.05)'}} } }
+        });
+      }
+    }, 50);
+  } else {
+    // Seed fallback
+    setTimeout(() => {
+      const ctx = document.getElementById('hourChart');
+      if (ctx) {
+        new Chart(ctx, {
+          type: 'bar',
+          data: { labels:['05:00','17:00','19:00','20:00','21:00'], datasets:[{ data:[2308,379,835,2071,3678], backgroundColor:['#9B7FD4','#D8D0EA','#D8D0EA','#9B7FD4','#6B4FA0'], borderRadius:5, borderSkipped:false }] },
+          options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+            scales: { x:{ticks:{font:{size:10},color:'#A09990'},grid:{display:false}},
+                      y:{ticks:{font:{size:10},color:'#A09990',callback:v=>v>=1000?(v/1000).toFixed(1)+'k':v},grid:{color:'rgba(0,0,0,0.05)'}} } }
+        });
+      }
+    }, 50);
+  }
+}
+
+// ─── Renderers ─────────────────────────────────────────────────────────────
+let trendChartInst = null, compareChartInst = null;
+const TYPE_COLORS = {
+  '名人×諮商系列':'#C14B2A','情感共鳴「你」系列':'#6B4FA0',
+  '活動/公告':'#1A5FA0','榮格/深度探索':'#185FA5',
+  '心理知識深度文':'#1D7A62','影視/研究者名言':'#B06E10','其他':'#888780',
+};
+
+function renderDashboard(period) {
+  const prev = getPrevPeriod(period);
+  const kpis = [
+    { label:'平均觸及人數', val: period.avg_reach.toLocaleString(), prev: prev?.avg_reach },
+    { label:'平均互動率',   val: period.avg_er + '%', prev: prev?.avg_er },
+    { label:'最高單篇觸及', val: period.max_reach.toLocaleString(), prev: prev?.max_reach },
+    { label:'平均分享數',   val: period.avg_share, prev: prev?.avg_share },
+  ];
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k => {
+    let deltaHtml = '';
+    if (prev && k.prev !== undefined) {
+      const diff = parseFloat(k.val) - parseFloat(k.prev);
+      const pct  = Math.round(diff/parseFloat(k.prev)*100);
+      const up   = diff >= 0;
+      deltaHtml = `<span class="delta ${up?'delta-up':'delta-down'}">${up?'↑':'↓'} ${Math.abs(pct)}% vs 前期</span>`;
+    }
+    return `<div class="kpi-card"><div class="kpi-label">${k.label}</div><div class="kpi-val">${k.val}</div><div class="kpi-sub">${deltaHtml || `共 ${period.total} 篇`}</div></div>`;
+  }).join('');
+
+  if (trendChartInst) trendChartInst.destroy();
+  const ctx = document.getElementById('trendChart');
+  trendChartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: period.monthly.map(m=>m.m),
+      datasets: [{ data: period.monthly.map(m=>Math.round(m.avg_reach)), borderColor:'#6B4FA0', backgroundColor:'rgba(107,79,160,0.08)', fill:true, tension:0.4, pointRadius:4, pointBackgroundColor:'#6B4FA0', borderWidth:2 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{ticks:{font:{size:11},color:'#A09990'},grid:{color:'rgba(0,0,0,0.05)'}},
+               y:{ticks:{font:{size:11},color:'#A09990',callback:v=>v>=1000?(v/1000).toFixed(1)+'k':v},grid:{color:'rgba(0,0,0,0.05)'}} }}
+  });
+
+  const maxR = Math.max(...period.types.map(t=>t.avg_reach));
+  document.getElementById('typeReachBars').innerHTML = period.types.slice(0,6).map(t=>`
+    <div class="bar-row">
+      <div class="bar-label">${t.name}</div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(t.avg_reach/maxR*100)}%;background:${TYPE_COLORS[t.name]||'#888'};"></div></div>
+      <div class="bar-val">${Math.round(t.avg_reach).toLocaleString()}</div>
+    </div>`).join('');
+
+  document.getElementById('topReachList').innerHTML = period.top_posts.slice(0,5).map((p,i)=>`
+    <div class="post-row">
+      <div class="post-rank">${i+1}</div>
+      <div class="post-body">
+        <div class="post-title">${p.title}</div>
+        <div class="post-meta">觸及 ${p.reach.toLocaleString()} ｜ 分享 ${p.share}
+          <span class="tag" style="background:${TYPE_COLORS[p.type]||'#eee'}22;color:${TYPE_COLORS[p.type]||'#888'}">${p.type}</span>
+        </div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('insightsList').innerHTML = period.insights.slice(0,5).map(ins=>`
+    <div class="insight insight-${ins.type}">
+      <div class="insight-title">${ins.title}</div>
+      <div class="insight-body">${ins.body}</div>
+    </div>`).join('');
+}
+
+function renderCompare() {
+  const periods = loadPeriods();
+  if (periods.length < 1) return;
+  if (compareChartInst) compareChartInst.destroy();
+  const ctx = document.getElementById('compareChart');
+  const colors = ['#6B4FA0','#C14B2A','#1D7A62','#1A5FA0','#B06E10','#888780'];
+  compareChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['平均觸及','平均互動率(x100)','平均分享'],
+      datasets: periods.map((p,i)=>({
+        label: p.label || p.period,
+        data: [p.avg_reach, Math.round(p.avg_er*100), Math.round(p.avg_share*10)/10],
+        backgroundColor: colors[i%colors.length]+'CC', borderRadius:4,
+      }))
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{ font:{size:11}, boxWidth:10, color:'#6B6560' } } },
+      scales:{ x:{ticks:{font:{size:11},color:'#A09990'},grid:{color:'rgba(0,0,0,0.05)'}},
+               y:{ticks:{font:{size:11},color:'#A09990'},grid:{color:'rgba(0,0,0,0.05)'}} }}
+  });
+  const thead = `<thead><tr><th>期別</th><th>篇數</th><th>均觸及</th><th>均互動率</th><th>均分享</th><th>最高觸及</th></tr></thead>`;
+  const tbody = `<tbody>${periods.map(p=>`<tr>
+    <td><span class="period-badge">${p.label||p.period}</span></td>
+    <td>${p.total}</td><td>${p.avg_reach.toLocaleString()}</td>
+    <td>${p.avg_er}%</td><td>${p.avg_share}</td><td>${p.max_reach.toLocaleString()}</td>
+  </tr>`).join('')}</tbody>`;
+  document.getElementById('compareTable').innerHTML = thead + tbody;
+}
+
+function renderPosts() {
+  const periods = loadPeriods();
+  const latest = periods[0];
+  if (!latest?.top_posts) return;
+  const byShare = [...latest.top_posts].sort((a,b)=>b.share-a.share);
+  const byEr    = [...latest.top_posts].sort((a,b)=>b.er-a.er);
+  function postListHTML(list, valFn) {
+    return list.slice(0,8).map((p,i)=>`
+      <div class="post-row">
+        <div class="post-rank">${i+1}</div>
+        <div class="post-body">
+          <div class="post-title">${p.title}</div>
+          <div class="post-meta">${valFn(p)}<span class="tag" style="background:${TYPE_COLORS[p.type]||'#eee'}22;color:${TYPE_COLORS[p.type]||'#888'}">${p.type}</span></div>
+        </div>
+      </div>`).join('');
+  }
+  document.getElementById('allTopReach').innerHTML = postListHTML(latest.top_posts, p=>`觸及 ${p.reach.toLocaleString()} ｜ `);
+  document.getElementById('allTopShare').innerHTML = postListHTML(byShare, p=>`分享 ${p.share} ｜ `);
+  document.getElementById('allTopEng').innerHTML   = postListHTML(byEr,    p=>`互動率 ${p.er}% ｜ `);
+}
+
+function renderHistory() {
+  const periods = loadPeriods();
+  if (periods.length === 0) { document.getElementById('historyList').innerHTML = '<div class="empty">尚無歷史記錄</div>'; return; }
+  document.getElementById('historyList').innerHTML = `<table class="hist-table">
+    <thead><tr><th>期別</th><th>篇數</th><th>均觸及</th><th>均互動率</th><th>最高觸及</th><th></th></tr></thead>
+    <tbody>${periods.map((p,i)=>`<tr>
+      <td><span class="period-badge">${p.label||p.period}</span></td>
+      <td>${p.total}</td><td>${p.avg_reach.toLocaleString()}</td>
+      <td>${p.avg_er}%</td><td>${p.max_reach.toLocaleString()}</td>
+      <td><button class="btn" onclick="deletePeriod(${i})" style="padding:4px 10px;font-size:11px;">刪除</button></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function renderAll() {
+  const periods = loadPeriods();
+  const latest = periods[0];
+  if (latest) {
+    document.getElementById('currentPeriod').textContent = latest.label || latest.period;
+    renderDashboard(latest);
+    renderStrategy(latest);
+  }
+  renderCompare();
+  renderPosts();
+  renderHistory();
+}
+
+function getPrevPeriod(current) {
+  const periods = loadPeriods();
+  const idx = periods.findIndex(p => p.period === current.period);
+  return idx >= 0 && idx < periods.length - 1 ? periods[idx + 1] : null;
+}
+
+function deletePeriod(idx) {
+  const periods = loadPeriods();
+  periods.splice(idx, 1);
+  savePeriods(periods);
+  renderAll();
+  showToast('已刪除');
+}
+
+// ─── Upload ─────────────────────────────────────────────────────────────────
+document.getElementById('uploadArea').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('uploadArea').addEventListener('dragover', e => { e.preventDefault(); document.getElementById('uploadArea').classList.add('drag'); });
+document.getElementById('uploadArea').addEventListener('dragleave', () => document.getElementById('uploadArea').classList.remove('drag'));
+document.getElementById('uploadArea').addEventListener('drop', e => {
+  e.preventDefault();
+  document.getElementById('uploadArea').classList.remove('drag');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+document.getElementById('fileInput').addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  if (!file.name.endsWith('.csv')) { showStatus('error', '請上傳 .csv 格式檔案'); return; }
+  showStatus('loading', '解析中...');
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const rows = parseCSV(e.target.result);
+      if (rows.length === 0) { showStatus('error', '找不到有效資料，請確認欄位格式'); return; }
+      processCSV(rows);
+      const summary = buildPeriodSummary(rows, file.name.replace('.csv','').replace(/_/g,' '));
+      const periods = loadPeriods();
+      const existing = periods.findIndex(p => p.period === summary.period);
+      if (existing >= 0) periods.splice(existing, 1);
+      periods.unshift(summary);
+      savePeriods(periods);
+      showStatus('success', `成功匯入 ${rows.length} 篇貼文（${summary.period}）`);
+      showToast(`已儲存：${summary.label}`);
+      renderAll();
+      setTimeout(() => showPage('strategy'), 1500);
+    } catch(err) {
+      showStatus('error', '解析失敗：' + err.message);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function showStatus(type, msg) {
+  const colors = { loading:'var(--blue-l)', success:'var(--green-l)', error:'var(--red-l)' };
+  const tcolors = { loading:'var(--blue)', success:'var(--teal)', error:'var(--red)' };
+  document.getElementById('uploadStatus').innerHTML = `<div style="background:${colors[type]};color:${tcolors[type]};border-radius:var(--r-sm);padding:12px 16px;font-size:13px;">${msg}</div>`;
+}
+
+// ─── Navigation ─────────────────────────────────────────────────────────────
+const PAGE_TITLES = { dashboard:'總覽儀表板', strategy:'發文策略建議', compare:'跨期比對', posts:'貼文排行', upload:'上傳新數據', history:'歷史記錄' };
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelector(`[onclick="showPage('${id}')"]`).classList.add('active');
+  document.getElementById('pageTitle').textContent = PAGE_TITLES[id] || id;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+renderAll();
+</script>
+</body>
+</html>
