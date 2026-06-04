@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 數據與發文策略分析中心</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F9F8F6;
+    --surface: #FFFFFF;
+    --surface2: #F3F1ED;
+    --border: #E6E1DA;
+    --text: #1C1917;
+    --text2: #6B6560;
+    --text3: #A09990;
+    --purple: #7C62A3;
+    --purple-l: #F1EDF7;
+    --purple-d: #4A3766;
+    --teal: #23856D;
+    --teal-l: #E6F5F1;
+    --coral: #CC5A37;
+    --coral-l: #FBF0ED;
+    --amber: #B87814;
+    --amber-l: #FBF3E6;
+    --blue: #226CA8;
+    --blue-l: #EAF2F9;
+    --red: #B23B3B;
+    --red-l: #FDF0F0;
+    --green: #348A43;
+    --green-l: #EDF6F0;
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .sidebar { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--text); color: #fff; display: flex; flex-direction: column; z-index: 100; overflow-y: auto; }
+  .sidebar-logo { padding: 24px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .sidebar-logo h1 { font-family: 'DM Serif Display', serif; font-size: 18px; color: #fff; line-height: 1.3; }
+  .sidebar-logo p  { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 3px; }
+  .sidebar-nav { flex: 1; padding: 12px 0; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; font-size: 13px; color: rgba(255,255,255,0.6); cursor: pointer; border-left: 3px solid transparent; transition: all .15s; }
+  .nav-item:hover { color: #fff; background: rgba(255,255,255,0.07); }
+  .nav-item.active { color: #fff; border-left-color: var(--purple); background: rgba(124,98,163,0.2); }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .nav-section { font-size: 10px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: .08em; padding: 16px 20px 6px; }
+  .main { margin-left: 220px; min-height: 100vh; }
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+  .topbar h2 { font-size: 16px; font-weight: 500; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .content { padding: 28px 32px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--r-sm); font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); transition: all .15s; }
+  .btn:hover { background: var(--surface2); }
+  .btn-primary { background: var(--purple); color: #fff; border-color: var(--purple); }
+  .btn-primary:hover { background: var(--purple-d); border-color: var(--purple-d); }
+  .btn svg { width: 15px; height: 15px; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 16px 18px; }
+  .kpi-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .kpi-val   { font-size: 26px; font-weight: 300; color: var(--text); letter-spacing: -.5px; line-height: 1; }
+  .kpi-sub   { font-size: 12px; color: var(--text3); margin-top: 5px; display: flex; align-items: center; gap: 4px; }
+  
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; }
+  .card-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .bar-label { font-size: 12px; color: var(--text); flex: 0 0 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-bg { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width .4s ease; }
+  .bar-val { font-size: 11px; color: var(--text3); flex: 0 0 54px; text-align: right; }
+
+  .post-row { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .post-row:last-child { border-bottom: none; }
+  .post-rank { font-size: 14px; font-weight: 300; color: var(--text3); flex: 0 0 20px; }
+  .post-body { flex: 1; min-width: 0; }
+  .post-title { font-size: 12px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .post-meta  { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .tag { display: inline-block; font-size: 10px; font-weight: 500; padding: 1px 7px; border-radius: 999px; margin-left: 5px; }
+
+  .insight { border-radius: var(--r-sm); padding: 12px 14px; margin-bottom: 8px; border-left: 3px solid; }
+  .insight-title { font-size: 12px; font-weight: 500; margin-bottom: 3px; }
+  .insight-body  { font-size: 12px; color: var(--text2); line-height: 1.6; }
+  .insight-s { background: var(--green-l); border-color: var(--teal); }
+  .insight-s .insight-title { color: var(--teal); }
+  .insight-w { background: var(--amber-l); border-color: var(--amber); }
+  .insight-w .insight-title { color: var(--amber); }
+  .insight-i { background: var(--blue-l);  border-color: var(--blue); }
+  .insight-i .insight-title { color: var(--blue); }
+  .insight-d { background: var(--red-l);   border-color: var(--red); }
+  .insight-d .insight-title { color: var(--red); }
+
+  .upload-area { border: 2px dashed var(--border); border-radius: var(--r-lg); padding: 60px 20px; text-align: center; cursor: pointer; transition: all .15s; background: var(--surface); }
+  .upload-area:hover { border-color: var(--purple); background: var(--purple-l); }
+  .upload-icon { width: 40px; height: 40px; margin: 0 auto 12px; color: var(--text3); }
+  .upload-area h3 { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+  .upload-area p  { font-size: 13px; color: var(--text3); }
+  #fileInput { display: none; }
+
+  .hist-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .hist-table th { background: var(--surface2); color: var(--text2); font-weight: 500; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+  .hist-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .period-badge { font-size: 11px; background: var(--purple-l); color: var(--purple); padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+
+  .strat-hero { background: linear-gradient(135deg, var(--purple-d) 0%, var(--purple) 60%, #9B7FD4 100%); border-radius: var(--r-lg); padding: 28px 32px; color: #fff; margin-bottom: 20px; }
+  .strat-hero h3 { font-size: 20px; font-weight: 500; margin-bottom: 6px; }
+  .strat-hero p  { font-size: 13px; opacity: .75; line-height: 1.6; }
+  .strat-hero-meta { display: flex; gap: 24px; margin-top: 16px; }
+  .strat-hero-stat .val { font-size: 22px; font-weight: 300; }
+  .strat-hero-stat .lbl { font-size: 11px; opacity: .6; margin-top: 2px; }
+
+  .strat-section-title { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .1em; color: var(--text3); margin: 20px 0 10px; display: flex; align-items: center; gap: 8px; }
+  .strat-section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  .strat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px 20px; margin-bottom: 12px; display: flex; gap: 16px; align-items: flex-start; }
+  .strat-card-icon { width: 40px; height: 40px; border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .strat-card-body { flex: 1; min-width: 0; }
+  .strat-card-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
+  .strat-card-desc  { font-size: 12px; color: var(--text2); line-height: 1.7; }
+  .strat-card-examples { margin-top: 10px; }
+  .strat-card-examples-title { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+  .example-pill { display: inline-block; font-size: 11px; background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; margin: 2px 3px 2px 0; color: var(--text2); }
+
+  .badge-hot    { background: var(--coral-l); color: var(--coral); font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+  .badge-keep   { background: var(--green-l); color: var(--green); font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+  .badge-warn   { background: var(--amber-l); color: var(--amber); font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+
+  .calendar-week { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; margin-top: 8px; }
+  .cal-day { border-radius: var(--r-sm); padding: 10px 6px; text-align: center; border: 1px solid var(--border); background: var(--surface); font-size: 11px; }
+  .cal-day .day-name { color: var(--text3); margin-bottom: 4px; }
+  .cal-day .day-reach { font-size: 13px; font-weight: 500; color: var(--text); }
+  .cal-day.cal-best  { background: var(--purple); border-color: var(--purple); }
+  .cal-day.cal-best .day-name  { color: rgba(255,255,255,.6); }
+  .cal-day.cal-best .day-reach { color: #fff; }
+  .cal-day.cal-good  { background: var(--purple-l); border-color: var(--purple); }
+  .cal-day.cal-good .day-reach { color: var(--purple); }
+
+  .page { display: none; }
+  .page.active { display: block; }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: #fff; padding: 12px 18px; border-radius: var(--r-md); font-size: 13px; z-index: 9999; transform: translateY(60px); opacity: 0; transition: all .3s; }
+  .toast.show { transform: none; opacity: 1; }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
+  .empty-state svg { width: 48px; height: 48px; color: var(--text3); margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h1>AI 心理學<br>數據分析中心</h1>
+    <p>FB Audience & Content Insight</p>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section">數據分析</div>
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <span>社群總覽儀表板</span>
+    </div>
+    <div class="nav-item" onclick="showPage('strategy')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span>五大受眾策略建議</span>
+    </div>
+    <div class="nav-item" onclick="showPage('posts')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span>爆文排行榜</span>
+    </div>
+    <div class="nav-section">數據管理</div>
+    <div class="nav-item" onclick="showPage('upload')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+      <span>上傳新數據 (CSV)</span>
+    </div>
+    <div class="nav-item" onclick="showPage('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>歷史記錄清除</span>
+    </div>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <h2 id="pageTitle">總覽儀表板</h2>
+    <div class="topbar-right">
+      <span id="currentPeriod" style="font-size:12px;color:var(--text3);">尚未上傳數據</span>
+      <button class="btn btn-primary" onclick="showPage('upload')">上傳 FB 數據</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="emptyContainer" class="card empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <h3>目前網頁內沒有任何數據資料</h3>
+      <p style="margin-top:8px;font-size:13px;color:var(--text2);">這是專屬於妳的私密分析工具，資料不會上傳雲端。請先至左側點選「上傳新數據」，將 FB 後台匯出的 CSV 放進來。</p>
+    </div>
+
+    <div id="mainAppContent" style="display:none;">
+      <!-- Dashboard Page -->
+      <div id="page-dashboard" class="page">
+        <div class="kpi-grid" id="kpiGrid"></div>
+        <div class="grid2">
+          <div class="card">
+            <div class="card-title">月度觸及趨勢圖</div>
+            <div style="height:200px;"><canvas id="trendChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title">五大潛在受眾與原型分析 (依平均觸及)</div>
+            <div id="typeReachBars"></div>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="card">
+            <div class="card-title">高共鳴爆文 Top 5</div>
+            <div id="topReachList"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">AI 情緒觸及洞察</div>
+            <div id="insightsList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Strategy Page -->
+      <div id="page-strategy" class="page">
+        <div id="stratContent"></div>
+      </div>
+
+      <!-- Posts Page -->
+      <div id="page-posts" class="page">
+        <div class="grid2">
+          <div class="card">
+            <div class="card-title">觸及人數排行</div>
+            <div id="allTopReach"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">分享次數排行 (最具傳播力)</div>
+            <div id="allTopShare"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload Page (Always visible regardless of data) -->
+    <div id="page-upload" class="page">
+      <div style="max-width:600px;">
+        <div class="upload-area" id="uploadArea">
+          <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+          <h3>將 FB 後台貼文 CSV 拖曳至此</h3>
+          <p style="margin-top:6px;">或點擊此處選擇電腦中的檔案</p>
+          <input type="file" id="fileInput" accept=".csv">
+        </div>
+        <div id="uploadStatus" style="margin-top:16px;"></div>
+      </div>
+    </div>
+
+    <!-- History Page -->
+    <div id="page-history" class="page">
+      <div class="card" style="max-width:500px;">
+        <div class="card-title">本機瀏覽器緩存管理</div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">目前數據皆安全地儲存在您這台電腦的瀏覽器中。如果您需要重置系統或清除數據，請點擊下方按鈕。</p>
+        <button class="btn" onclick="clearAll()" style="color:var(--red);border-color:var(--red-l);">完整清除本機所有數據紀錄</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORE_KEY = 'xuli_clean_fb_data';
+const TYPE_COLORS = {
+  '「乖女兒」日常掙扎與窒息感': '#7C62A3',
+  '「鋼鐵女強人」武裝與孤單': '#CC5A37',
+  '「隱形推手」放下自我的空白': '#23856D',
+  '「避難者」推開連結的日常': '#226CA8',
+  '「求勝職人」高成就心理資源': '#B87814',
+  '綜合大眾/其他公告': '#888780'
+};
+
+const STRAT_META = {
+  '「乖女兒」日常掙扎與窒息感': { icon: '🗝️', color: '#7C62A3', bg: '#F1EDF7', hook: '「明明在外面精明幹練，為什麼一接到家裡電話，瞬間變回手足無措的小女孩？」', method: '運用錯位邏輯。將大眾以為的「懂事、孝順」重新定義為「安靜的監牢」，引發深夜共鳴。' },
+  '「鋼鐵女強人」武裝與孤單': { icon: '🛡️', color: '#CC5A37', bg: '#FBF0ED', hook: '「因為看過親人的委屈，妳武裝得無堅不摧。妳以為這叫獨立，卻和柔軟斷了線。」', method: '強調卸下盔甲。不要指責她的強悍，而是溫柔看見強悍背後的「失落」與孤單。' },
+  '「隱形推手」放下自我的空白': { icon: '🌿', color: '#23856D', bg: '#E6F5F1', hook: '「妳習慣把伴侶的夢想、孩子的需求放在前面，直到感到窒息，才發現弄丟了自己的名字。」', method: '讀後賦能。使用「百寶箱、救贖自己」等具有重量感的詞彙，幫習慣犧牲的人找回自我主權。' },
+  '「避難者」推開連結的日常': { icon: '🌊', color: '#226CA8', bg: '#EAF2F9', hook: '「多數心理諮商的目標，並非教妳去解決關係，而是陪妳在安全的距離中，重新學會相愛。」', method: '建立界線安全感。不要逼她立刻和解，改用神話原型（如波西鳳吞石榴籽）告訴她擁有主權是安全的。' },
+  '「求勝職人」高成就心理資源': { icon: '🏆', color: '#B87814', bg: '#FBF0E6', hook: '「人一輩子能學的技能很多，但感受到由心而生、在重要時刻還能成為自己的自由最難。」', method: '職人特質對位。把心理諮商與「運動員心理素質、內在資源挖掘」結合，提高高成就者的分享意願。' },
+  '綜合大眾/其他公告': { icon: '📝', color: '#888780', bg: '#F3F1ED', hook: '「在各種關係的角色裡，你有沒有留一個位置給自己？」', method: '大眾核心痛點。用溫潤且具備收藏價值的金句收尾，引發留言打「❤️」的行動。' }
+};
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+function clearAll() {
+  if (!confirm('確定要清空這台電腦裡儲存的所有數據嗎？')) return;
+  localStorage.removeItem(STORE_KEY);
+  showToast('數據已全部清除');
+  location.reload();
+}
+
+function classifyPost(title) {
+  const t = String(title);
+  if (/乖女兒|懂事|長輩|家庭|平靜|手足無措|小女孩|母親/.test(t)) return '「乖女兒」日常掙扎與窒息感';
+  if (/強悍|武裝|女強人|獨立|受委屈|不摧|示弱|孤單/.test(t)) return '「鋼鐵女強人」武裝與孤單';
+  if (/推手|伴侶|孩子|需求|夢想|犧牲|付出|名字|枯萎/.test(t)) return '「隱形推手」放下自我的空白';
+  if (/避難|逃避|連結|距離|王國|世界|相愛|界線|諮商/.test(t)) return '「避難者」推開連結的日常';
+  if (/職人|棒球|WBC|高成就|卓越|技能|自由|資源|核心/.test(t)) return '「求勝職人」高成就心理資源';
+  return '綜合大眾/其他公告';
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g,'').trim());
+  return lines.slice(1).map(line => {
+    const vals = []; let cur = ''; let inQ = false;
+    for (const c of line) {
+      if (c === '"') inQ = !inQ;
+      else if (c === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
+      else cur += c;
+    }
+    vals.push(cur.trim());
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = (vals[i]||'').replace(/^"|"$/g,'').trim());
+    return obj;
+  }).filter(r => r['標題'] && r['觸及人數']);
+}
+
+function n(v) { return parseFloat(String(v).replace(/,/g,'')) || 0; }
+
+function processCSVData(rows) {
+  rows.forEach(r => {
+    r._reach   = n(r['觸及人數']);
+    r._engage  = n(r['心情、留言和分享次數'] || 0);
+    r._share   = n(r['分享'] || 0);
+    r._er      = r._reach > 0 ? (r._engage / r._reach) * 100 : 0;
+    r._type    = classifyPost(r['標題']);
+    
+    try {
+      const raw = r['發佈時間'] || '';
+      const parts = raw.split(' ')[0].split('/');
+      if (parts.length === 3) {
+        r._month = parseInt(parts[0]) + '月';
+        r._hour = parseInt((raw.split(' ')[1]||'0').split(':')[0]);
+        r._dow = new Date(`${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`).getDay();
+      }
+    } catch(e){}
+  });
+  
+  const total = rows.length;
+  const avg_reach = rows.reduce((s,r)=>s+r._reach,0)/total;
+  const avg_er    = rows.reduce((s,r)=>s+r._er,0)/total;
+  const avg_share = rows.reduce((s,r)=>s+r._share,0)/total;
+  const max_reach = Math.max(...rows.map(r=>r._reach));
+
+  // Monthly 
+  const mMap = {};
+  rows.forEach(r => {
+    if(!r._month) return;
+    if(!mMap[r._month]) mMap[r._month] = [];
+    mMap[r._month].push(r._reach);
+  });
+  const monthly = Object.entries(mMap).map(([m,arr])=>({ m, avg_reach: arr.reduce((a,b)=>a+b,0)/arr.length }));
+
+  // Types
+  const tMap = {};
+  Object.keys(TYPE_COLORS).forEach(k => tMap[k] = []);
+  rows.forEach(r => { if(tMap[r._type]) tMap[r._type].push(r); });
+  const types = Object.entries(tMap).map(([name, list]) => {
+    const cnt = list.length;
+    return {
+      name, count: cnt,
+      avg_reach: cnt ? list.reduce((s,r)=>s+r._reach,0)/cnt : 0,
+      avg_er: cnt ? list.reduce((s,r)=>s+r._er,0)/cnt : 0,
+      avg_share: cnt ? list.reduce((s,r)=>s+r._share,0)/cnt : 0
+    };
+  }).sort((a,b)=>b.avg_reach - a.avg_reach);
+
+  // Top posts
+  const top_posts = [...rows].sort((a,b)=>b._reach-a._reach).slice(0,10).map(r=>({
+    title: r['標題'], reach: r._reach, share: r._share, er: r._er, type: r._type
+  }));
+
+  // Day of week
+  const dMap = {};
+  rows.forEach(r => {
+    if(r._dow===undefined||isNaN(r._dow)) return;
+    if(!dMap[r._dow]) dMap[r._dow] = [];
+    dMap[r._dow].push(r._reach);
+  });
+  const dowNames = ['日','一','二','三','四','五','六'];
+  const dowAvgs = Object.entries(dMap).map(([d,arr])=>({ name: dowNames[parseInt(d)], avg: arr.reduce((a,b)=>a+b,0)/arr.length }));
+
+  // Hours
+  const hMap = {};
+  rows.forEach(r => {
+    if(r._hour===undefined||isNaN(r._hour)) return;
+    if(!hMap[r._hour]) hMap[r._hour] = [];
+    hMap[r._hour].push(r._reach);
+  });
+  const hourAvgs = Object.entries(hMap).map(([h,arr])=>({ h: parseInt(h), avg: arr.reduce((a,b)=>a+b,0)/arr.length })).sort((a,b)=>a.h-b.h);
+
+  // AI Insights
+  const insights = [];
+  const bestType = types[0];
+  if(bestType && bestType.count > 0) {
+    insights.push({ type:'s', title:`當前最能引發觸及的側寫：${bestType.name}`, body:`平均觸及高達 ${Math.round(bestType.avg_reach).toLocaleString()}，此類受眾在最近的發文中情緒共鳴度最高，建議本週加強此類別文案。` });
+  }
+  const highShare = [...types].sort((a,b)=>b.avg_share-a.avg_share)[0];
+  if(highShare && highShare.count > 0) {
+    insights.push({ type:'i', title:`最具擴散傳播力的受眾：${highShare.name}`, body:`平均每篇獲得 ${Math.round(highShare.avg_share)} 次分享，這群人在看完文章後最傾向轉發給身邊的朋友。` });
+  }
+  insights.push({ type:'i', title:`文案優化建議機制`, body: `請隨時注意貼文的前三行。FB會將第四行後的文字截斷，務必在前三行使用「錯位矛盾句」引起受眾好奇心。` });
+
+  return { total, avg_reach: Math.round(avg_reach), avg_er: Math.round(avg_er*100)/100, avg_share: Math.round(avg_share*10)/10, max_reach, monthly, types, top_posts, dowAvgs, hourAvgs, insights };
+}
+
+let trendChartInst = null;
+let hourChartInst = null;
+
+function renderDashboard(data) {
+  document.getElementById('currentPeriod').textContent = `共解析 ${data.total} 篇貼文資料`;
+  
+  const kpis = [
+    { label: '平均觸及人數', val: data.avg_reach.toLocaleString(), sub: '帳號基礎影響力' },
+    { label: '平均互動率', val: data.avg_er + '%', sub: '受眾黏著度指標' },
+    { label: '平均分享數', val: data.avg_share, sub: '大眾傳播擴散力' },
+    { label: '單篇最高觸及', val: data.max_reach.toLocaleString(), sub: '爆文潛力極限' }
+  ];
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
+    <div class="kpi-card">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-val">${k.val}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+
+  // Trend Chart
+  if(trendChartInst) trendChartInst.destroy();
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  trendChartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.monthly.map(m=>m.m),
+      datasets: [{ data: data.monthly.map(m=>Math.round(m.avg_reach)), borderColor:'#7C62A3', backgroundColor:'rgba(124,98,163,0.06)', fill:true, tension:0.3, borderWidth:2 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+  });
+
+  // Bars
+  const maxR = Math.max(...data.types.map(t=>t.avg_reach), 1);
+  document.getElementById('typeReachBars').innerHTML = data.types.map(t => `
+    <div class="bar-row">
+      <div class="bar-label">${t.name}</div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(t.avg_reach/maxR*100)}%;background:${TYPE_COLORS[t.name]};"></div></div>
+      <div class="bar-val">${Math.round(t.avg_reach).toLocaleString()}</div>
+    </div>`).join('');
+
+  // Top posts
+  document.getElementById('topReachList').innerHTML = data.top_posts.slice(0,5).map((p,i)=>`
+    <div class="post-row">
+      <div class="post-rank">${i+1}</div>
+      <div class="post-body">
+        <div class="post-title">${p.title}</div>
+        <div class="post-meta">觸及 ${p.reach.toLocaleString()} ｜ 分享 ${p.share}
+          <span class="tag" style="background:${TYPE_COLORS[p.type]}22;color:${TYPE_COLORS[p.type]}">${p.type}</span>
+        </div>
+      </div>
+    </div>`).join('');
+
+  // Insights
+  document.getElementById('insightsList').innerHTML = data.insights.map(ins => `
+    <div class="insight insight-${ins.type}">
+      <div class="insight-title">${ins.title}</div>
+      <div class="insight-body">${ins.body}</div>
+    </div>`).join('');
+}
+
+function renderStrategy(data) {
+  const calDays = ['一','二','三','四','五','六','日'];
+  const dayMap = {};
+  data.dowAvgs.forEach(d => dayMap[d.name] = d.avg);
+  const maxDay = Math.max(...Object.values(dayMap), 1);
+
+  const calHTML = calDays.map(d => {
+    const v = dayMap[d] || 0;
+    const ratio = v / maxDay;
+    const cls = ratio >= 0.85 ? 'cal-best' : ratio >= 0.5 ? 'cal-good' : '';
+    return `<div class="cal-day ${cls}">
+      <div class="day-name">週${d}</div>
+      <div class="day-reach">${v ? Math.round(v/100)/10+'k' : '—'}</div>
+    </div>`;
+  }).join('');
+
+  const cardsHTML = data.types.map(t => {
+    const meta = STRAT_META[t.name] || STRAT_META['綜合大眾/其他公告'];
+    return `
+      <div class="strat-card">
+        <div class="strat-card-icon" style="background:${meta.bg};color:${meta.color}">${meta.icon}</div>
+        <div class="strat-card-body">
+          <div class="strat-card-title">
+            ${t.name}
+            <span class="badge-hot">歷史發文: ${t.count} 篇 ｜ 均觸及: ${Math.round(t.avg_reach).toLocaleString()}</span>
+          </div>
+          <div class="strat-card-desc" style="margin-top:6px;">
+            <strong>建議情緒鉤子開頭句：</strong><br>
+            <span style="color:var(--text); font-style:italic;">${meta.hook}</span><br><br>
+            <strong>核心文案心理學邏輯：</strong><br>
+            ${meta.method}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('stratContent').innerHTML = `
+    <div class="strat-hero">
+      <h3>五大核心受眾 × 心理學爆文指南</h3>
+      <p>系統已自動依據您上傳的粉專數據，為不同側寫受眾進行觸及排定。越上方的受眾，代表目前在您的社群中反響越強烈。</p>
+    </div>
+    
+    <div class="strat-section-title">星期發文效果熱力圖</div>
+    <div class="grid2" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="card-title">最適合您粉專的發文日期</div>
+        <div class="calendar-week">${calHTML}</div>
+      </div>
+      <div class="card">
+        <div class="card-title">時段最佳發文窗口分析</div>
+        <div style="height:140px;"><canvas id="hourChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="strat-section-title">五大受眾定位與文案調配方針</div>
+    ${cardsHTML}
+  `;
+
+  // Render Hour Chart
+  setTimeout(() => {
+    if(hourChartInst) hourChartInst.destroy();
+    const hCtx = document.getElementById('hourChart').getContext('2d');
+    hourChartInst = new Chart(hCtx, {
+      type: 'bar',
+      data: {
+        labels: data.hourAvgs.map(h=>h.h+':00'),
+        datasets: [{ data: data.hourAvgs.map(h=>Math.round(h.avg)), backgroundColor:'#7C62A3', borderRadius:4 }]
+      },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+    });
+  }, 50);
+}
+
+function renderPostsPage(data) {
+  const byShare = [...data.top_posts].sort((a,b)=>b.share-a.share);
+  function postListHTML(list, label, field) {
+    return list.map((p,i)=>`
+      <div class="post-row">
+        <div class="post-rank">${i+1}</div>
+        <div class="post-body">
+          <div class="post-title">${p.title}</div>
+          <div class="post-meta">${label}: ${p[field].toLocaleString()}
+            <span class="tag" style="background:${TYPE_COLORS[p.type]}22;color:${TYPE_COLORS[p.type]}">${p.type}</span>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+  document.getElementById('allTopReach').innerHTML = postListHTML(data.top_posts, '觸及人數', 'reach');
+  document.getElementById('allTopShare').innerHTML = postListHTML(byShare, '分享次數', 'share');
+}
+
+function initApp() {
+  const data = loadData();
+  if (data) {
+    document.getElementById('emptyContainer').style.display = 'none';
+    document.getElementById('mainAppContent').style.display = 'block';
+    renderDashboard(data);
+    renderStrategy(data);
+    renderPostsPage(data);
+  } else {
+    document.getElementById('emptyContainer').style.display = 'block';
+    document.getElementById('mainAppContent').style.display = 'none';
+  }
+}
+
+// Upload Handling
+document.getElementById('uploadArea').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  if (!file.name.endsWith('.csv')) { updateStatus('請上傳正確的 .csv 格式檔案'); return; }
+  updateStatus('資料分析中，請稍候...');
+  
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const rows = parseCSV(e.target.result);
+      if(rows.length === 0) { updateStatus('解析失敗，找不到有效欄位數據。'); return; }
+      const structuredData = processCSVData(rows);
+      localStorage.setItem(STORE_KEY, JSON.stringify(structuredData));
+      updateStatus('匯入成功！正在切換畫面...');
+      showToast('大數據模型分析完成');
+      setTimeout(() => { location.reload(); }, 1000);
+    } catch(err) {
+      updateStatus('解析出錯：' + err.message);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function updateStatus(msg) {
+  document.getElementById('uploadStatus').innerHTML = `<div style="background:var(--purple-l);color:var(--purple);border-radius:var(--r-sm);padding:12px 16px;font-size:13px;text-align:center;">${msg}</div>`;
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  const targetNav = document.querySelector(`[onclick="showPage('${id}')"]`);
+  if(targetNav) targetNav.classList.add('active');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Start
+initApp();
+</script>
+</body>
+</html>
